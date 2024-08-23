@@ -1,0 +1,24 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne+Mono&display=swap');
+
+h1 {
+  text-align: center;
+  margin-left: 20px; 
+}
+
+video {
+  width: 25vw;
+  height: 20vw;
+  margin: 2rem;
+  background: #080c0f;
+}
+
+.videos {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/*.myD{
+  border: 5px outset rgb(0, 0, 0);
+  background-color: #D3D3D3;    
+  text-align: center;
+}*/

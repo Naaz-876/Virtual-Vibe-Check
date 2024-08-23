@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"> </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"> </script>
+    <title>Virtual Vibe Check</title>
+  </head>
+  <body>
+ 
+    <h1>Virtual Vibe Check</h1>
+  
+    <div class="videos">
+      <span>
+        <video id="webcamVideo" autoplay playsinline></video>
+      </span>
+      <span>
+        <video id="remoteVideo" autoplay playsinline></video>
+      </span>
+
+
+    </div>
+    <div style="text-align: center; margin-bottom: 20px;">
+      <button type="button" class="btn btn-outline-primary" id="webcamButton">On Camera</button>
+      <span style="margin: 0 10px;"></span> 
+      <button type="button" class="btn btn-outline-primary" id="offCameraButton">Off Camera</button>
+  </div>
+  
+  <div style="text-align: center; margin-bottom: 20px;">
+    <button type="button" class="btn btn-outline-dark" id="callButton" disabled style="margin-right: 10px;">Create Call</button>
+    <input id="callInput" style="margin-right: 10px;" />
+    <button type="button" class="btn btn-outline-success" id="answerButton" disabled style="margin-right: 10px;">Join</button>
+    <button type="button" class="btn btn-outline-danger" id="hangupButton" disabled>Leave</button>
+</div>
+
+<div style="text-align: center;">
+  <button type="button" class="btn btn-secondary" onclick="startDetection()">Start Emotion Detection</button>
+  <button type="button" class="btn btn-danger" onclick="stopDetection()">Stop Emotion Detection</button>
+</div>
+
+<div id="result"></div>
+
+<script>
+    let detectionTimeout; // Variable to hold the timeout ID
+    let imageCount = 0; // Variable to track the number of images captured
+  
+    function detectEmotion() {
+        fetch("http://127.0.0.1:5000/analyze-emotions", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                throw new Error('Face not detected.');
+            }
+        })
+        .then(data => {
+            // Handle the response data
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML += `
+                <p>Emotion Analysis for Set ${Math.ceil(imageCount / 5)}:</p>
+                <p>Most Common Emotion: ${data.most_common_emotion}</p>
+                <p>Count of Most Common Emotion: ${data.count_of_most_common_emotion}</p>
+                <p>Mean Percentage of Most Common Emotion: ${data.mean_percentage_of_most_common_emotion}</p>
+            `;
+        })
+        .catch(error => {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML += "<p>No face detected.</p>";
+        });
+    }
+  
+    function detect() {
+        html2canvas(document.querySelector("#remoteVideo")).then(canvas => {
+            var imageData = canvas.toDataURL("image/jpeg", 0.9);
+            if (imageData) {
+                var formData = new FormData();
+                formData.append("image", imageData);
+  
+                fetch("http://localhost/webrtc-firebase/php/save_image.php", {
+                    method: "POST",
+                    body: formData,
+                })
+                .then(response => response.text())
+                .then(data => {
+                    console.log(data);
+                    imageCount++;
+                    if (imageCount % 5 === 0) {
+                        detectEmotion(); // Call emotion detection after every 5 images
+                        // Set a timeout to capture the next set of images after 40 seconds
+                        detectionTimeout = setTimeout(detect, 30000); // 30000 milliseconds = 30 seconds
+                    } else {
+                        detect(); // Capture the next image
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            } else {
+                console.error("Image data is undefined.");
+            }
+  
+            // Hide the canvas after capturing
+            canvas.style.display = "none";
+  
+            // Optionally, you can set a timeout to make the canvas reappear after some time
+            setTimeout(() => {
+                canvas.style.display = "block";
+            }, 5000); // 5000 milliseconds (adjust the time as needed)
+        });
+    }
+  
+    function startDetection() {
+        // Reset image count before starting detection
+        imageCount = 0;
+        // Clear previous results
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = "";
+        // Call the detect function to start the process
+        detect();
+    }
+  
+    function stopDetection() {
+        // Clear any ongoing detection timeout
+        clearTimeout(detectionTimeout);
+        // Update the result div to indicate that emotion detection has been stopped
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML += "<p>Emotion detection has been stopped.</p>";
+    }
+  </script>
+  
+    <script type="module" src="/main.js"></script>
+    
+  </body>
+</html>
