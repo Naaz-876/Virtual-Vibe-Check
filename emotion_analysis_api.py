@@ -7,6 +7,7 @@ from collections import Counter
 
 app = Flask(__name__)
 CORS(app)
+
 @app.route('/analyze-emotions', methods=['POST'])
 def analyze_emotions():
     # Define the path to the folder containing images
